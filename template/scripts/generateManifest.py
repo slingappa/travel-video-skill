@@ -117,13 +117,21 @@ for i, (date, label) in enumerate(DAY_ITINERARY.items()):
     for v in sel_vids:
         v["trimDuration"] = min(v["duration"], MAX_VIDEO_DUR)
 
+    vids_out = [{"file": v["file"], "duration": v["duration"], "trimDuration": v["trimDuration"]} for v in sel_vids]
+    # Default sequence: photos then videos (picker.py lets user reorder/interleave)
+    sequence = (
+        [{"type": "photo", "file": f, "isPortrait": False} for f in selected] +
+        [{"type": "video", "file": v["file"], "trimDuration": v["trimDuration"], "duration": v["duration"]} for v in sel_vids]
+    )
+
     days.append({
         "date": date,
         "dayNum": i + 1,
         "label": label,
         "photos": selected,
         "photoOrientations": [],
-        "videos": [{"file": v["file"], "duration": v["duration"], "trimDuration": v["trimDuration"]} for v in sel_vids],
+        "videos": vids_out,
+        "sequence": sequence,
     })
 
 ts = "\n".join([
@@ -131,9 +139,12 @@ ts = "\n".join([
     "",
     "export interface VideoClipInfo { file: string; duration: number; trimDuration: number; }",
     "",
+    "export interface SequenceItem { type: 'photo' | 'video'; file: string; isPortrait?: boolean; trimDuration?: number; duration?: number; }",
+    "",
     "export interface DayData {",
     "  date: string; dayNum: number; label: string;",
     "  photos: string[]; photoOrientations: boolean[]; videos: VideoClipInfo[];",
+    "  sequence?: SequenceItem[];",
     "}",
     "",
     "export const MEDIA_BASE = 'media/jpg';",

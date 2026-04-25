@@ -12,7 +12,7 @@ Reference implementation (Tonsai 2026): `/Users/redpanda/Downloads/Tonsai/tonsai
 - Animated intro/outro title cards (Montserrat 900 font)
 - Per-day sequences: hollow zoom-punch title card → Ken Burns photos → trimmed video clips
 - Optional: animated map scenes (MapLibre + CARTO free tiles, no API key)
-- Interactive GUI picker to select best photos and videos per day
+- Interactive GUI picker: select photos/videos + drag to set mixed playback sequence
 - Auto portrait detection (contain + letterbox vs landscape cover)
 
 ---
@@ -215,8 +215,9 @@ Copy `scripts/patch-orientations.py` from `SKILL_TEMPLATE_PATH/scripts/patch-ori
 Workflow:
   1. Pick best photos + videos per day:
        python3 scripts/picker.py
-     Photos tab: click = select/deselect, order = click order
-     Videos tab: click to pick (max 3), gold = selected
+     📷 Photos tab: click to select/deselect
+     🎬 Videos tab: click to pick (max 3)
+     📋 Sequence tab: drag to set mixed playback order (interleave photos + videos freely)
 
   2. Preview:
        npx remotion studio   →   http://localhost:3000
@@ -244,3 +245,5 @@ Key notes:
 - Landscape photos: `objectFit: "cover"`, scale `1.0→1.18`
 - Hollow title: `WebkitTextFillColor: transparent` + `backgroundClip: text` + `backgroundImage: url(photo)`
 - Title exit: text scale `1→12x` + overlay fade + next photo punch-through
+- `day.sequence[]` drives playback order — photos and videos interleaved freely; falls back to photos-then-videos if absent
+- `SequenceItem`: `{type: "photo"|"video", file, isPortrait?, trimDuration?, duration?}`

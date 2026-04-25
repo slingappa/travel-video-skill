@@ -7,13 +7,22 @@ export interface VideoClipInfo {
   trimDuration: number;
 }
 
+export interface SequenceItem {
+  type: "photo" | "video";
+  file: string;           // manifest jpg name for photos, original filename for videos
+  isPortrait?: boolean;   // photos only
+  trimDuration?: number;  // videos only
+  duration?: number;      // videos only
+}
+
 export interface DayData {
   date: string;
   dayNum: number;
   label: string;
   photos: string[];
-  photoOrientations: boolean[];  // true = portrait — auto-detected from jpg dimensions
+  photoOrientations: boolean[];  // true = portrait
   videos: VideoClipInfo[];
+  sequence?: SequenceItem[];     // interleaved order; falls back to photos-then-videos if absent
 }
 
 export const MEDIA_BASE = 'media/jpg';
@@ -25,7 +34,8 @@ export const DAYS: DayData[] = [
     "label": "Day Label",
     "photos": [],
     "photoOrientations": [],
-    "videos": []
+    "videos": [],
+    "sequence": []
   }
 ];
 

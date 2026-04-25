@@ -5,59 +5,96 @@ import { wipe } from "@remotion/transitions/wipe";
 import { DayTitleCard } from "../components/DayTitleCard";
 import { KenBurnsPhoto } from "../components/KenBurnsPhoto";
 import { VideoClip } from "../components/VideoClip";
-import type { DayData } from "../data/mediaManifest";
+import type { DayData, SequenceItem } from "../data/mediaManifest";
 import React from "react";
 
 const PHOTO_DURATION_S = 3.5;
 const TITLE_DURATION_S = 3;
-const TRANSITION_FRAMES = 15;
+const TRANSITION_FRAMES = 20;
 
 interface DaySceneProps {
   day: DayData;
 }
 
-function buildPhotoAndVideoChildren(day: DayData, fps: number): React.ReactNode[] {
+// Build a flat sequence from day.sequence (interleaved) or fall back to photos-then-videos
+function resolveSequence(day: DayData): SequenceItem[] {
+  if (day.sequence && day.sequence.length > 0) return day.sequence;
+
+  // Legacy fallback: photos first, then videos
+  const items: SequenceItem[] = [
+    ...day.photos.map((file, i) => ({
+      type: "photo" as const,
+      file,
+      isPortrait: day.photoOrientations?.[i] ?? false,
+    })),
+    ...day.videos.map((v) => ({
+      type: "video" as const,
+      file: v.file,
+      trimDuration: v.trimDuration,
+      duration: v.duration,
+    })),
+  ];
+  return items;
+}
+
+function buildSequenceChildren(day: DayData, fps: number): React.ReactNode[] {
+  const seq = resolveSequence(day);
   const photoFrames = Math.floor(PHOTO_DURATION_S * fps);
   const items: React.ReactNode[] = [];
 
-  day.photos.forEach((photo, i) => {
-    const isPortrait = day.photoOrientations?.[i] ?? false;
-    items.push(
-      <TransitionSeries.Sequence key={`photo-${i}`} durationInFrames={photoFrames} premountFor={fps}>
-        <KenBurnsPhoto src={`media/jpg/${photo}`} index={i} isPortrait={isPortrait} />
-      </TransitionSeries.Sequence>
-    );
-    if (i < day.photos.length - 1) {
+  seq.forEach((item, i) => {
+    const isFirst = i === 0;
+
+    if (!isFirst) {
+      // Photo→photo: soft fade; anything→video or video→anything: spring
+      const prevIsVideo = seq[i - 1].type === "video";
+      const currIsVideo = item.type === "video";
+      if (prevIsVideo || currIsVideo) {
+        items.push(
+          <TransitionSeries.Transition
+            key={`tr-${i}`}
+            presentation={fade()}
+            timing={springTiming({ durationInFrames: 20 })}
+          />
+        );
+      } else {
+        items.push(
+          <TransitionSeries.Transition
+            key={`tr-${i}`}
+            presentation={fade()}
+            timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })}
+          />
+        );
+      }
+    }
+
+    if (item.type === "photo") {
       items.push(
-        <TransitionSeries.Transition
-          key={`photo-tr-${i}`}
-          presentation={fade()}
-          timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })}
-        />
+        <TransitionSeries.Sequence key={`item-${i}`} durationInFrames={photoFrames} premountFor={fps}>
+          <KenBurnsPhoto src={`media/jpg/${item.file}`} index={i} isPortrait={item.isPortrait ?? false} />
+        </TransitionSeries.Sequence>
+      );
+    } else {
+      const trimDuration = item.trimDuration ?? 6;
+      items.push(
+        <TransitionSeries.Sequence
+          key={`item-${i}`}
+          durationInFrames={Math.floor(trimDuration * fps)}
+          premountFor={fps}
+        >
+          <VideoClip file={item.file} trimDuration={trimDuration} />
+        </TransitionSeries.Sequence>
       );
     }
   });
 
-  day.videos.forEach((vid, i) => {
-    items.push(
-      <TransitionSeries.Transition
-        key={`vid-tr-${i}`}
-        presentation={fade()}
-        timing={springTiming({ durationInFrames: 20 })}
-      />
-    );
-    items.push(
-      <TransitionSeries.Sequence
-        key={`vid-${i}`}
-        durationInFrames={Math.floor(vid.trimDuration * fps)}
-        premountFor={fps}
-      >
-        <VideoClip file={vid.file} trimDuration={vid.trimDuration} />
-      </TransitionSeries.Sequence>
-    );
-  });
-
   return items;
+}
+
+// First photo in sequence (for title card background)
+function firstPhoto(day: DayData): string | undefined {
+  const seq = resolveSequence(day);
+  return seq.find((i) => i.type === "photo")?.file ?? day.photos[0];
 }
 
 export const DayScene = ({ day }: DaySceneProps) => {
@@ -71,7 +108,7 @@ export const DayScene = ({ day }: DaySceneProps) => {
           dayNum={day.dayNum}
           label={day.label}
           date={day.date}
-          nextPhoto={day.photos[0]}
+          nextPhoto={firstPhoto(day)}
         />
       </TransitionSeries.Sequence>
 
@@ -80,7 +117,7 @@ export const DayScene = ({ day }: DaySceneProps) => {
         timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })}
       />
 
-      {buildPhotoAndVideoChildren(day, fps)}
+      {buildSequenceChildren(day, fps)}
     </TransitionSeries>
   );
 };
