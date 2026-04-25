@@ -34,7 +34,8 @@ function calcDayDuration(day: (typeof DAYS)[0], fps: number): number {
   const contentF = seq.reduce((sum, item) => {
     return sum + (item.type === "photo" ? Math.floor(PHOTO_S * fps) : Math.floor((item.trimDuration ?? 6) * fps));
   }, 0);
-  const transitionF = Math.max(0, seq.length - 1) * T;
+  // (seq.length - 1) transitions between content items + 1 wipe from title to first content
+  const transitionF = Math.max(0, seq.length - 1) * T + T;
 
   return Math.max(titleF + contentF - transitionF, fps * 4);
 }

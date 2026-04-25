@@ -33,7 +33,7 @@ const estimateDuration = () => {
         ];
     const contentF = seq.reduce((sum, item) =>
       sum + (item.type === "photo" ? Math.floor(PHOTO_S * FPS) : Math.floor((item.trimDuration ?? 6) * FPS)), 0);
-    return Math.max(titleF + contentF - Math.max(0, seq.length - 1) * T, FPS * 4);
+    return Math.max(titleF + contentF - (Math.max(0, seq.length - 1) * T + T), FPS * 4);
   };
 
   // Mirror buildAllChildren exactly:
