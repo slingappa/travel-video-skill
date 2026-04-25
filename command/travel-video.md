@@ -235,6 +235,49 @@ Key notes:
 
 ---
 
+## STEP 9 — Ask about output size / compression
+
+After render completes (or if user asks about file size), say:
+
+> The raw Remotion render is typically **1–2 GB** for a 5-minute 1080p video.
+> For sharing/uploading (Google Photos, Drive, WhatsApp), you'll want to compress it.
+>
+> **How will you share this video?** Pick a target:
+>
+> | Target | CRF | Est. size (5 min) | Quality |
+> |--------|-----|-------------------|---------|
+> | Archive / master copy | 18 | ~600–900 MB | Near-lossless |
+> | Google Photos / Drive | 23 | ~150–300 MB | Excellent |
+> | WhatsApp / Telegram | 28 | ~60–120 MB | Good |
+> | Email / web embed | 32 | ~30–60 MB | Acceptable |
+>
+> Which target do you want? (or enter a custom CRF 18–32)
+
+Once user picks, offer **both options**:
+
+**Option A — Re-render directly at target quality** (best — single step, no re-encode loss):
+```bash
+node_modules/.bin/remotion render TripVideo --gl=swangle \
+  --codec=h264 --crf=CRF_VALUE \
+  --output out/trip-compressed.mp4
+```
+*Slower (full render), but maximum quality for the file size.*
+
+**Option B — Compress existing render with ffmpeg** (faster — 2–3 min, tiny quality loss):
+```bash
+ffmpeg -i out/trip.mp4 \
+  -c:v libx264 -crf CRF_VALUE -preset slow \
+  -c:a aac -b:a 192k \
+  out/trip-compressed.mp4
+```
+*Recommended if render already done and took a long time.*
+
+Fill in `CRF_VALUE` from the table above based on user's choice.
+
+Note: Google Photos re-encodes on upload anyway — CRF 23 is the sweet spot for it.
+
+---
+
 ## Critical patterns (never break these)
 
 - `TransitionSeries` needs **flat** `React.ReactNode[]` — never use Fragment + `.map()`; build arrays with helper functions
